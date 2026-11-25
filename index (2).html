@@ -1,0 +1,281 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FR Detail Manager</title><style>[hidden]{display:none!important}
+:root{font-family:system-ui,Arial;background:#111318;color:#f7f7f7}*{box-sizing:border-box}body{margin:0}header{background:#191c23;border-bottom:2px solid #ff821c;padding:18px 4%;display:flex;justify-content:space-between;align-items:center}h1{margin:0;font-size:23px}small,.muted{color:#aab0bc}main{max-width:1150px;margin:auto;padding:22px 15px}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}button,select,input{font:inherit;border-radius:9px;padding:10px;border:1px solid #454955}button{background:#ff821c;color:#171717;font-weight:700;cursor:pointer}button.secondary{background:#282d37;color:white}button:disabled{opacity:.35;cursor:not-allowed}input,select{background:#222630;color:white;max-width:100%}input{width:100%}.active{outline:2px solid white}.panel{background:#1c2028;border:1px solid #383d49;border-radius:14px;padding:17px;margin:12px 0}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.stat{background:#282d37;padding:17px;border-radius:10px}.stat b{font-size:22px;display:block;margin-top:8px}.green{color:#65d89a}.orange{color:#ff9d45}.line{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #383d49;padding:11px 0}.line:last-child{border:0}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.controls>*{flex:1;min-width:110px}.hidden{display:none}.badge{font-size:12px;background:#353a46;padding:5px 9px;border-radius:20px}label{display:block;margin:12px 0 5px}table{width:100%;border-collapse:collapse}td,th{padding:10px;text-align:left;border-bottom:1px solid #373b44} .scroll{max-height:440px;overflow:auto} .notice{background:#33291c;padding:12px;border-radius:9px;color:#ffcb94} @media(max-width:600px){.line{align-items:flex-start;flex-direction:column}.stat b{font-size:19px}}@media(min-width:850px){.sale-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(310px,1fr);gap:18px;align-items:start}.sale-layout>.panel{margin:0}.sale-layout>.panel:nth-child(2){position:sticky;top:16px}.sale-layout .controls{align-items:end}}@media(max-width:849px){.sale-layout{display:block}}@media(max-width:620px){#balance .line{align-items:flex-start;gap:8px}#balance .line span{min-width:0;overflow-wrap:anywhere}#balance .line b{font-size:14px}#balance .controls>*{flex:1 1 140px}#balance .controls input[type=date]{width:100%!important}}
+</style></head><body>
+<header id="appHeader" hidden><div><h1>FR <span class="orange">DETAIL</span> MANAGER</h1><small>Inventario · Cotizador · Ventas · Balance</small></div><div><span class="badge">V5 · Web</span> <button class="secondary" onclick="webLogout()">Salir</button></div></header><main id="appMain" hidden>
+<div class="notice">Iniciá sesión para consultar los datos de FR Detail en Supabase.</div>
+<nav><button class="secondary" onclick="show('balance')">Balance</button><button class="secondary" onclick="newSaleMode()">Nueva venta</button><button class="secondary" onclick="show('stock')">Inventario</button><button class="secondary" onclick="show('expense')">Registrar gasto</button><button class="secondary" onclick="show('backup')">Respaldo</button></nav>
+<section id="balance"><h2>Balance</h2><div class="controls"><select id="period" onchange="renderBalance()"><option value="today">Hoy</option><option value="week">Semana</option><option value="month" selected>Mes</option><option value="year">Año</option><option value="date">Día específico</option></select><input id="balanceDate" type="date" aria-label="Seleccionar día" onchange="renderBalance()" style="display:none;width:auto"><select id="month" onchange="renderBalance()"></select><select id="year" onchange="renderBalance()"></select></div><div class="stats" id="stats"></div><div class="panel"><h3>Movimientos del período</h3><div id="movements"></div></div></section>
+<section id="sale" class="hidden"><h2 id="saleTitle">Cotizador / Nueva venta</h2><div id="editNotice" class="notice hidden"></div><div class="sale-layout"><div class="panel"><input id="search" placeholder="Buscar productos..." oninput="renderCatalog()"><div id="catalog" class="scroll"></div></div><div class="panel"><h3>Carrito</h3><div id="cart"></div><div class="controls"><label>Descuento % <input id="discount" type="number" min="0" max="100" value="0" oninput="renderCart()"></label><label>Medio de pago <select id="payment"><option>Efectivo</option><option>Transferencia</option><option>Mercado Pago</option><option>Tarjeta</option><option>Otro</option></select></label></div><h2 id="total"></h2><label id="editDateLabel" class="hidden">Fecha y hora de venta <input id="editDate" type="datetime-local" step="1"></label><button id="saveSaleButton" onclick="confirmSale()">Confirmar venta</button> <button class="secondary" onclick="clearSaleCart()">Vaciar carrito</button> <button id="cancelEditButton" class="secondary hidden" onclick="cancelSaleEdit()">Cancelar edición</button></div></div></section>
+<section id="stock" class="hidden"><h2>Inventario</h2><div class="stats" id="inventoryStats"></div><div class="panel"><div class="controls"><button onclick="openProductForm()">+ Nuevo producto</button><button class="secondary" onclick="cloudLoad().catch(e=>alert(e.message))">Actualizar</button></div><div class="controls" style="margin-top:14px"><button id="tabAll" onclick="stockTab='all';renderStock()">Activos</button><button id="tabEmpty" class="secondary" onclick="stockTab='empty';renderStock()">Sin stock</button><button id="tabArchived" class="secondary" onclick="stockTab='archived';renderStock()">Archivados</button></div><input id="stockSearch" style="margin-top:12px" placeholder="Buscar producto..." oninput="renderStock()"><div id="stockList" class="scroll"></div></div><div class="panel hidden" id="productForm"><h3 id="productFormTitle">Nuevo producto</h3><label>Código / ID</label><input id="productId" placeholder="FRD-0473"><label>Nombre</label><input id="productName"><label>Categoría</label><input id="productCategory"><label>Stock</label><input id="productStock" type="number" min="0" step="1"><label>Costo unitario $</label><input id="productCost" type="number" min="0" step="0.01"><label>Precio de venta $</label><input id="productPrice" type="number" min="0" step="0.01"><p class="controls"><button onclick="saveProductCloud()">Guardar producto</button><button class="secondary" onclick="document.getElementById('productForm').classList.add('hidden')">Cancelar</button></p></div></section>
+<section id="expense" class="hidden"><h2>Registrar gasto</h2><div class="panel"><label>Concepto</label><input id="expenseName" placeholder="Ej. Combustible reparto"><label>Categoría</label><select id="expenseCategory"><option>Combustible</option><option>Publicidad</option><option>Comisiones</option><option>Servicios</option><option>Alquiler</option><option>Otros</option></select><label>Importe $</label><input id="expenseAmount" type="number" min="0" step="0.01"><label>Fecha</label><input id="expenseDate" type="date"><p><button onclick="saveExpense()">Guardar gasto</button></p><small>La compra de mercadería para reventa no se registra aquí como gasto operativo: se incorpora al inventario para evitar descontarla dos veces de la ganancia.</small></div></section>
+<section id="backup" class="hidden"><h2>Respaldo de datos</h2><div class="panel"><p>Descargá tus ventas, gastos y stock actualizado en JSON.</p><button onclick="backup()">Exportar respaldo</button></div></section>
+</main><script>
+let state={products:[],sales:[],expenses:[]};let cart={};const $=id=>document.getElementById(id),money=n=>'$'+Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:2});const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const today=()=>{let d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};function persist(){}function show(id){document.querySelectorAll('main section').forEach(x=>x.classList.toggle('hidden',x.id!==id));if(id==='balance')renderBalance();if(id==='sale'){renderCatalog();renderCart()}if(id==='stock')renderStock()}
+function add(id){let p=state.products.find(x=>x.id===id);if(!p||p.archivedAt)return;cart[id]=Math.min(p.stock,(cart[id]||0)+1);renderCatalog();renderCart()}function changeQty(id,delta){let p=state.products.find(x=>x.id===id);if(!p||p.archivedAt)return;cart[id]=Math.max(0,Math.min(p.stock,(cart[id]||0)+delta));if(!cart[id])delete cart[id];renderCart();renderCatalog()}
+function renderCatalog(){let q=$('search').value.toLocaleLowerCase();let ps=state.products.filter(p=>!p.archivedAt&&p.name.toLocaleLowerCase().includes(q)).slice(0,80);$('catalog').innerHTML=ps.map(p=>`<div class="line"><div><b>${esc(p.name)}</b><br><small>Stock ${p.stock} · ${money(p.price)}</small></div><button ${p.stock<1||cart[p.id]>=p.stock?'disabled':''} onclick="add(${idArg(p.id)})">Agregar</button></div>`).join('')||'<p>No se encontraron productos.</p>';if(state.products.filter(p=>!p.archivedAt&&p.name.toLocaleLowerCase().includes(q)).length>80)$('catalog').insertAdjacentHTML('beforeend','<small>Mostrando los primeros 80 resultados. Escribí para filtrar.</small>')}
+function totals(){let lines=Object.entries(cart).map(([id,qty])=>({p:state.products.find(x=>x.id===id),qty})).filter(x=>x.p);let subtotal=lines.reduce((s,x)=>s+x.p.price*x.qty,0);let discount=Math.max(0,Math.min(100,Number($('discount').value)||0));return {lines,subtotal,discount,total:Math.round(subtotal*(1-discount/100)*100)/100}}
+function renderCart(){let t=totals();$('cart').innerHTML=t.lines.map(x=>`<div class="line"><div><b>${esc(x.p.name)}</b><br><small>${money(x.p.price)} × ${x.qty}</small></div><div class="controls"><button class="secondary" onclick="changeQty(${idArg(x.p.id)},-1)">−</button><b>${x.qty}</b><button class="secondary" onclick="changeQty(${idArg(x.p.id)},1)">+</button></div></div>`).join('')||'<p class="muted">Carrito vacío.</p>';$('total').textContent='Total: '+money(t.total)}
+function confirmSale(){let t=totals();if(!t.lines.length)return alert('Agregá un producto.');if(t.lines.some(x=>x.p.archivedAt||x.qty>x.p.stock))return alert('Producto archivado o stock insuficiente.');if(!confirm('¿Confirmar venta por '+money(t.total)+'?'))return;let ratio=t.subtotal? t.total/t.subtotal:0;let items=t.lines.map(x=>({id:x.p.id,name:x.p.name,qty:x.qty,price:x.p.price,cost:x.p.cost,revenue:Math.round(x.p.price*x.qty*ratio*100)/100}));items.forEach(x=>state.products.find(p=>p.id===x.id).stock-=x.qty);state.sales.push({id:Date.now(),date:today(),items,total:t.total,cost:items.reduce((s,x)=>s+x.qty*x.cost,0),payment:$('payment').value,discount:t.discount});persist();cart={};$('discount').value=0;renderCart();renderCatalog();alert('Venta registrada. Stock y balance actualizados.');show('balance')}
+function saveExpense(){let name=$('expenseName').value.trim(),amount=Number($('expenseAmount').value),date=$('expenseDate').value;if(!name||!Number.isFinite(amount)||amount<=0||!date)return alert('Completá concepto, importe y fecha.');state.expenses.push({id:Date.now(),name,category:$('expenseCategory').value,amount,date});persist();$('expenseName').value='';$('expenseAmount').value='';alert('Gasto registrado.');show('balance')}
+function renderBalance(){
+ const dateInput=$('balanceDate');
+ if(!dateInput.value)dateInput.value=today();
+ const period=$('period').value,month=Number($('month').value),year=Number($('year').value),now=new Date();
+ const startWeek=new Date(now.getFullYear(),now.getMonth(),now.getDate()-((now.getDay()+6)%7));
+ const weekStart=[startWeek.getFullYear(),String(startWeek.getMonth()+1).padStart(2,'0'),String(startWeek.getDate()).padStart(2,'0')].join('-');
+ const matches=d=>{if(!d)return false;if(period==='date')return d===dateInput.value;if(period==='today')return d===today();if(period==='week')return d>=weekStart&&d<=today();if(period==='month')return d.slice(0,7)===year+'-'+String(month).padStart(2,'0');return d.slice(0,4)===String(year)};
+ dateInput.style.display=period==='date'?'':'none';
+ $('month').style.display=period==='month'?'':'none';
+ $('year').style.display=['month','year'].includes(period)?'':'none';
+ const sales=state.sales.filter(x=>!x.canceledAt&&matches(x.date)),expenses=state.expenses.filter(x=>matches(x.date));
+ const revenue=sales.reduce((s,x)=>s+x.total,0),cost=sales.reduce((s,x)=>s+x.cost,0),other=expenses.reduce((s,x)=>s+x.amount,0),gross=revenue-cost,net=gross-other;
+ const vals=[['Ventas',revenue],['Costo mercadería vendida',cost],['Gastos operativos',other],['Ganancia bruta',gross],['Ganancia neta',net]];
+ $('stats').innerHTML=vals.map(([k,v])=>`<div class="stat"><small>${k}</small><b class="${k==='Ganancia neta'?'orange':k==='Ventas'?'green':''}">${money(v)}</b></div>`).join('');
+ const displayTime=x=>{if(!x.createdAt)return 'Hora no registrada';const d=new Date(x.createdAt);return isNaN(d.getTime())?'Hora no registrada':d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',timeZone:'America/Argentina/Buenos_Aires'})};
+ const movements=[...sales.map(x=>({date:x.date,createdAt:x.createdAt||'',html:`<div><b>Venta · ${esc(x.payment||'Medio de pago no registrado')}</b><br><small>${esc(x.date)} · ${esc(displayTime(x))}${x.revision?' · Editada '+x.revision+' vez/veces':''}</small><br><small>${x.items&&x.items.length?x.items.map(i=>esc(i.name||'Producto')+' × '+Number(i.qty||0)).join(', '):'Sin detalle de productos'}</small></div>`,amount:x.total,saleId:x.id})),...expenses.map(x=>({date:x.date,createdAt:x.createdAt||'',html:`<div><b>Gasto · ${esc(x.name||'Sin concepto')}</b><br><small>${esc(x.date)} · ${esc(displayTime(x))}</small></div>`,amount:-x.amount}))].sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||'').localeCompare(a.createdAt||''));
+ $('movements').innerHTML=movements.map(m=>`<div class="line" style="align-items:flex-start"><span>${m.html}</span><b style="white-space:nowrap">${money(m.amount)}</b>${m.saleId!=null?`<div class="controls"><button class="secondary" onclick="startSaleEdit(${Number(m.saleId)})">Editar venta</button><button class="secondary" onclick="cancelCloudSale(${Number(m.saleId)})">Anular venta</button></div>`:''}</div>`).join('')||'<p class="muted">Sin movimientos registrados en este período.</p>';
+ const canceled=state.sales.filter(x=>x.canceledAt&&matches(x.date));
+ if(canceled.length)$('movements').insertAdjacentHTML('beforeend','<h3>Ventas anuladas (fuera del balance)</h3>'+canceled.map(x=>`<div class="line"><div><b>Venta N° ${esc(String(x.id))} · Anulada</b><br><small>${esc(x.date)} · ${x.items.map(i=>esc(i.name)+' × '+Number(i.qty)).join(', ')}</small></div><b>${money(x.total)}</b></div>`).join(''));
+}
+
+let stockTab='all';
+function renderStock(){
+ const all=state.products||[];
+ const products=all.filter(p=>!p.archivedAt);
+ const cost=products.reduce((a,p)=>a+Number(p.cost||0)*Number(p.stock||0),0);
+ const sale=products.reduce((a,p)=>a+Number(p.price||0)*Number(p.stock||0),0);
+ const empty=products.filter(p=>Number(p.stock)===0).length;
+ $('inventoryStats').innerHTML=[['Costo total',money(cost)],['Valor de venta',money(sale)],['Ganancia potencial',money(sale-cost)],['Total de artículos',products.length.toLocaleString('es-AR')],['Unidades disponibles',products.reduce((a,p)=>a+Number(p.stock||0),0).toLocaleString('es-AR')]].map(([label,val])=>`<div class="stat"><small>${label}</small><b>${val}</b></div>`).join('');
+ $('tabAll').className=stockTab==='all'?'':'secondary';$('tabEmpty').className=stockTab==='empty'?'':'secondary';$('tabEmpty').textContent='Sin stock ('+empty+')';
+ const q=$('stockSearch').value.toLocaleLowerCase();
+ $('tabArchived').className=stockTab==='archived'?'':'secondary';$('tabArchived').textContent='Archivados ('+all.filter(p=>p.archivedAt).length+')';
+ const ps=(stockTab==='archived'?all.filter(p=>p.archivedAt):products).filter(p=>(stockTab!=='empty'||Number(p.stock)===0)&&(p.name.toLocaleLowerCase().includes(q)||String(p.id).toLowerCase().includes(q)));
+ $('stockList').innerHTML=ps.map(p=>`<div class="line"><div><b>${esc(p.name)}</b><br><small>${esc(String(p.id))} · Stock: ${p.stock} · Costo ${money(p.cost)} · Venta ${money(p.price)}<br>Ganancia unitaria: ${money(Number(p.price)-Number(p.cost))} · Margen sobre venta: ${Number(p.price)>0?((Number(p.price)-Number(p.cost))/Number(p.price)*100).toLocaleString('es-AR',{maximumFractionDigits:2})+'%':'—'} · Recargo sobre costo: ${Number(p.cost)>0?((Number(p.price)-Number(p.cost))/Number(p.cost)*100).toLocaleString('es-AR',{maximumFractionDigits:2})+'%':'—'}</small></div><button class="secondary" onclick="openProductForm(${JSON.stringify(p.id).replace(/"/g,'&quot;')})">Editar</button> <button class="secondary" onclick="toggleArchive(${JSON.stringify(p.id).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')})">${p.archivedAt?'Recuperar':'Archivar'}</button></div>`).join('')+'<small>Mostrando '+ps.length+' de '+(stockTab==='archived'?all.filter(p=>p.archivedAt).length:products.length)+' artículos.</small>';
+}
+function backup(){let blob=new Blob([JSON.stringify({app:'FR Detail Manager',version:1,exportedAt:new Date().toISOString(),...state},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='FR_Detail_respaldo_'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+let now=new Date();$('month').innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}">${new Date(2026,i,1).toLocaleString('es-AR',{month:'long'})}</option>`).join('');$('year').innerHTML=Array.from({length:9},(_,i)=>`<option>${2022+i}</option>`).join('');$('month').value=now.getMonth()+1;$('year').value=now.getFullYear();$('expenseDate').value=today();show('balance');
+</script>
+<style>
+#cloudGate{position:fixed;inset:0;z-index:1000;background:#101217;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
+#cloudGate .panel{width:min(480px,100%);border-color:#ff821c}
+#cloudGate input{margin-bottom:9px}
+#cloudGate .hint{font-size:13px;color:#b7bbc5;line-height:1.5}
+#cloudStatus{color:#ffcb94;white-space:pre-wrap}
+</style>
+<div id="cloudGate"><div class="panel">
+<h2>FR <span class="orange">DETAIL</span> MANAGER</h2>
+<p>Ingresá con tu usuario de Supabase. La primera vez, configurá la conexión.</p>
+<label>URL del proyecto Supabase</label><input id="cloudUrl" placeholder="https://xxxxx.supabase.co" autocomplete="off">
+<label>Clave publicable</label><input id="cloudKey" placeholder="sb_publishable_..." autocomplete="off">
+<label>Correo del usuario</label><input id="cloudEmail" type="email" autocomplete="username">
+<label>Contraseña del usuario</label><input id="cloudPassword" type="password" autocomplete="current-password">
+<button id="cloudLogin" onclick="cloudLogin()">Conectar e ingresar</button>
+<p id="cloudStatus"></p>
+<p class="hint">Usá solamente la clave publicable, nunca la llave secreta. La URL puede pegarse con /rest/v1/ al final: se ajustará automáticamente. El inventario se consulta directamente en Supabase.</p>
+</div></div>
+<script>
+let cloudBase='',cloudKey='',cloudToken='',cloudBusy=false;
+const cloudStatus=t=>document.getElementById('cloudStatus').textContent=t;
+const cloudHeader=()=>({'apikey':cloudKey,'Authorization':'Bearer '+cloudToken,'Content-Type':'application/json'});
+async function cloudRequest(path,opts={}){
+ const r=await fetch(cloudBase+'/rest/v1/'+path,{...opts,headers:{...cloudHeader(),...(opts.headers||{})}});
+ if(!r.ok)throw Error((await r.text()).slice(0,450));
+ if(r.status===204)return null;
+ const t=await r.text();return t?JSON.parse(t):null;
+}
+async function cloudLoad(){
+ let [products,sales,expenses]=await Promise.all([
+ cloudRequest('products?select=*&order=id.asc&limit=1000'),
+ cloudRequest('sales?select=*,sale_items(*)&order=id.desc&limit=1000'),
+ cloudRequest('expenses?select=*&order=id.desc&limit=1000')
+ ]);
+ state.products=products.map(p=>({id:p.id,name:p.name,category:p.category||'',stock:p.stock,cost:Number(p.cost),price:Number(p.price),archivedAt:p.archived_at||null}));
+ state.sales=sales.map(s=>({id:s.id,date:argentinaDate(s.created_at),createdAt:s.created_at,revision:Number(s.revision||0),editHistory:s.edit_history||[],canceledAt:s.canceled_at||null,payment:s.payment_method,total:Number(s.total),discount:Number(s.discount_percent),items:(s.sale_items||[]).map(i=>({id:i.product_id,name:i.product_name,qty:i.quantity,price:Number(i.unit_price),cost:Number(i.unit_cost)})),cost:(s.sale_items||[]).reduce((a,i)=>a+Number(i.unit_cost)*i.quantity,0)}));
+ state.expenses=expenses.map(e=>({id:e.id,name:e.concept,category:e.category||'Otros',amount:Number(e.amount),date:e.expense_date,createdAt:e.created_at||null}));
+ for(const id of Object.keys(cart)){const p=state.products.find(x=>String(x.id)===id);if(!editingSale&&(!p||p.archivedAt))delete cart[id];}
+ renderBalance();renderCatalog();renderStock();renderCart();
+}
+async function cloudLogin(){
+ if(cloudBusy)return;
+ cloudBase=document.getElementById('cloudUrl').value.trim().replace(/\/rest\/v1\/?$/,'').replace(/\/+$/,'');
+ cloudKey=document.getElementById('cloudKey').value.trim();
+ let email=document.getElementById('cloudEmail').value.trim(),password=document.getElementById('cloudPassword').value;
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(cloudBase)||!cloudKey||!email||!password)return cloudStatus('Completá los cuatro datos. La URL debe terminar en .supabase.co');
+ if(cloudKey.startsWith('sb_secret_'))return cloudStatus('Usá una clave publicable, no una clave secreta.');
+ if(!cloudKey.startsWith('sb_publishable_')){try{const claims=JSON.parse(atob(cloudKey.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));if(claims.role!=='anon')throw Error();}catch(e){return cloudStatus('Usá una clave publicable o anon.');}}
+ cloudBusy=true;document.getElementById('cloudLogin').disabled=true;cloudStatus('Verificando acceso...');
+ try{
+  let r=await fetch(cloudBase+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':cloudKey,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  let j=await r.json();if(!r.ok||!j.access_token)throw Error(j.msg||j.error_description||j.error||'No se pudo ingresar');
+  cloudToken=j.access_token;document.getElementById("cloudPassword").value="";
+  sessionStorage.setItem('fr_cloud_access',JSON.stringify({base:cloudBase,key:cloudKey,email,token:j.access_token,refresh:j.refresh_token,expires:Date.now()+j.expires_in*1000}));
+  localStorage.setItem('fr_cloud_config',JSON.stringify({base:cloudBase,key:cloudKey,email}));
+  await cloudLoad();
+  document.getElementById('cloudGate').style.display='none';document.getElementById('appHeader').hidden=false;document.getElementById('appMain').hidden=false;
+  document.querySelector('header .badge').textContent='Supabase · Conectado';
+  document.querySelector('.notice').innerHTML='Conexión con Supabase activa. Los cambios se guardan en la nube.';
+   if(!state.products.length)show('backup');
+ }catch(e){cloudStatus('Error: '+e.message)}
+ finally{cloudBusy=false;document.getElementById('cloudLogin').disabled=false}
+}
+persist=function(){};
+confirmSale=async function(){
+ if(cloudBusy)return;
+ const t=totals();
+ if(!t.lines.length)return alert('Agregá un producto.');
+ if(t.lines.some(x=>x.p.archivedAt||x.qty>x.p.stock))return alert('Producto archivado o stock insuficiente.');
+ if(!confirm('¿Confirmar venta por '+money(t.total)+'?'))return;
+ cloudBusy=true;
+ let saleId=null;
+ try{
+  for(const x of t.lines){
+   const rows=await cloudRequest('products?id=eq.'+encodeURIComponent(x.p.id)+'&select=id,stock,price,cost,archived_at');
+   if(!rows||rows.length!==1||rows[0].archived_at||Number(rows[0].stock)<x.qty||Number(rows[0].price)!==Number(x.p.price)||Number(rows[0].cost)!==Number(x.p.cost))throw Error('Stock, precio o costo cambió. Actualizá el catálogo.');
+  }
+  saleId=await cloudRequest('rpc/register_sale',{method:'POST',body:JSON.stringify({p_payment_method:document.getElementById('payment').value,p_items:t.lines.map(x=>({product_id:String(x.p.id),quantity:x.qty})),p_discount_percent:t.discount})});
+  if(saleId==null||!/^\d+$/.test(String(saleId)))throw Error('No se recibió un identificador válido.');
+  cart={};document.getElementById('discount').value=0;
+  await cloudLoad();show('balance');
+  alert('Venta N° '+saleId+' registrada en Supabase.');
+ }catch(e){
+  alert((saleId==null?'No se pudo confirmar el resultado. Revisá el historial antes de reintentar.':'Venta N° '+saleId+' recibida; revisá el historial antes de reintentar.')+'\n'+e.message);
+  await cloudLoad().catch(()=>{});
+ }finally{cloudBusy=false}
+};
+saveExpense=async function(){
+ if(cloudBusy)return;
+ let name=document.getElementById('expenseName').value.trim(),amount=Number(document.getElementById('expenseAmount').value),date=document.getElementById('expenseDate').value;
+ if(!name||!Number.isFinite(amount)||amount<=0||!date)return alert('Completá concepto, importe y fecha.');
+ cloudBusy=true;
+ try{
+ await cloudRequest('expenses',{method:'POST',body:JSON.stringify({concept:name,category:document.getElementById('expenseCategory').value,amount,expense_date:date})});
+ document.getElementById('expenseName').value='';document.getElementById('expenseAmount').value='';
+ await cloudLoad();show('balance');alert('Gasto guardado en Supabase.');
+ }catch(e){alert('No se pudo guardar el gasto: '+e.message)}
+ finally{cloudBusy=false}
+};
+restore=async function(){alert('Para proteger los datos en la nube, la restauración automática está deshabilitada en esta versión. Conservá el JSON original.');};
+
+async function toggleArchive(id){
+ if(cloudBusy)return;
+ const p=state.products.find(x=>String(x.id)===String(id));if(!p)return;
+ const restoring=!!p.archivedAt;
+ if(!confirm(restoring?'¿Recuperar '+p.name+'?':'¿Archivar '+p.name+'? Se ocultará de nuevas ventas y conservará su historial y stock.'))return;
+ cloudBusy=true;
+ try{
+  const rows=await cloudRequest('products?id=eq.'+encodeURIComponent(id)+'&select=id,archived_at',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({archived_at:restoring?null:new Date().toISOString()})});
+  if(!Array.isArray(rows)||rows.length!==1||Boolean(rows[0].archived_at)===restoring)throw Error('No se confirmó el cambio.');
+  if(!restoring)delete cart[id];
+  await cloudLoad();alert(restoring?'Producto recuperado.':'Producto archivado.');
+ }catch(e){alert('Revisá el inventario antes de reintentar: '+e.message);}finally{cloudBusy=false;}
+}
+
+let editingProductId=null;
+function openProductForm(id=null){
+ const p=id==null?null:state.products.find(x=>String(x.id)===String(id));editingProductId=p?p.id:null;
+ document.getElementById('productFormTitle').textContent=p?'Editar producto':'Nuevo producto';
+ const max=state.products.reduce((a,x)=>Math.max(a,Number(String(x.id).match(/^FRD-(\d+)$/)?.[1]||0)),0);
+ const values={productId:p?.id||'FRD-'+String(max+1).padStart(4,'0'),productName:p?.name||'',productCategory:p?.category||'',productStock:p?.stock??0,productCost:p?.cost??0,productPrice:p?.price??0};
+ for(const [k,v] of Object.entries(values))document.getElementById(k).value=v;
+ document.getElementById('productId').readOnly=!!p;
+ document.getElementById('productForm').classList.remove('hidden');document.getElementById('productForm').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function saveProductCloud(){
+ if(cloudBusy)return;
+ const id=document.getElementById('productId').value.trim(),name=document.getElementById('productName').value.trim(),category=document.getElementById('productCategory').value.trim();
+ const stock=Number(document.getElementById('productStock').value),cost=Number(document.getElementById('productCost').value),price=Number(document.getElementById('productPrice').value);
+ if(!id||!name||![stock,cost,price].every(Number.isFinite)||!Number.isInteger(stock)||stock<0||cost<0||price<0)return alert('Completá todos los campos con valores válidos.');
+ if(!editingProductId&&state.products.some(p=>p.id===id))return alert('Ya existe un producto con ese código.');
+ if(!confirm((editingProductId?'¿Guardar cambios en ':'¿Agregar a Supabase ')+name+'?'))return;
+ cloudBusy=true;
+ try{
+  const data={name,category,stock,cost,price};
+  if(editingProductId){
+   const rows=await cloudRequest('products?id=eq.'+encodeURIComponent(editingProductId)+'&select=id',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});
+   if(!Array.isArray(rows)||rows.length!==1)throw Error('No se confirmó la actualización del producto.');
+  }else{
+   const rows=await cloudRequest('products?select=id',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({id,...data})});
+   if(!Array.isArray(rows)||rows.length!==1)throw Error('No se confirmó el alta del producto.');
+  }
+  document.getElementById('productForm').classList.add('hidden');await cloudLoad();alert('Producto guardado en Supabase.');
+ }catch(e){alert('No se pudo guardar: '+e.message)}finally{cloudBusy=false}
+}
+let cloudSession=null,refreshInFlight=null;
+async function ensureCloudSession(){
+ if(!cloudSession)return;
+ if(Date.now()<cloudSession.expires-60000)return;
+ if(refreshInFlight)return refreshInFlight;
+ refreshInFlight=(async()=>{
+  const r=await fetch(cloudBase+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:cloudKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:cloudSession.refresh})});
+  const j=await r.json();if(!r.ok||!j.access_token)throw Error('La sesión venció. Volvé a ingresar.');
+  cloudToken=j.access_token;cloudSession={...cloudSession,token:j.access_token,refresh:j.refresh_token,expires:Date.now()+j.expires_in*1000};
+  localStorage.setItem('fr_cloud_session',JSON.stringify(cloudSession));
+ })().finally(()=>refreshInFlight=null);
+ return refreshInFlight;
+}
+const originalCloudRequest=cloudRequest;
+cloudRequest=async function(path,opts={}){await ensureCloudSession();return originalCloudRequest(path,opts)};
+const originalCloudLogin=cloudLogin;
+cloudLogin=async function(){
+ await originalCloudLogin();
+ const x=JSON.parse(sessionStorage.getItem('fr_cloud_access')||'null');
+ if(x&&cloudToken===x.token){cloudSession=x;localStorage.setItem('fr_cloud_session',JSON.stringify(x));}
+};
+async function restoreCloudSession(){
+ try{
+  const x=JSON.parse(localStorage.getItem('fr_cloud_session')||'null');if(!x||!x.base||!x.key||!x.refresh)return;
+  cloudBase=x.base;cloudKey=x.key;cloudToken=x.token;cloudSession=x;
+  await ensureCloudSession();await cloudLoad();
+  document.getElementById('cloudGate').style.display='none';document.getElementById('appHeader').hidden=false;document.getElementById('appMain').hidden=false;
+  document.querySelector('header .badge').textContent='Supabase · Conectado';
+  document.querySelector('.notice').textContent='Conexión con Supabase activa. Los cambios se guardan en la nube.';
+ }catch(e){localStorage.removeItem('fr_cloud_session');cloudSession=null;cloudStatus('Ingresá nuevamente: '+e.message)}
+}
+const saved=JSON.parse(localStorage.getItem('fr_cloud_config')||'{}');
+document.getElementById('cloudUrl').value=saved.base||'';
+document.getElementById('cloudKey').value=saved.key||'';
+document.getElementById('cloudEmail').value=saved.email||'';
+
+async function cancelCloudSale(id){
+ if(cloudBusy)return;
+ if(!cloudToken)return alert('Ingresá a Supabase primero.');
+ const sale=state.sales.find(s=>String(s.id)===String(id));
+ if(!sale||sale.canceledAt||!sale.items.length)return alert('Venta no disponible para anular.');
+ if(!confirm('¿Anular venta N° '+id+' por '+money(sale.total)+'? Se devolverán las unidades al inventario y se conservará el historial.'))return;
+ cloudBusy=true;
+ try{
+  await cloudRequest('rpc/cancel_sale',{method:'POST',body:JSON.stringify({p_sale_id:id})});
+  await cloudLoad();
+  const updated=state.sales.find(s=>String(s.id)===String(id));
+  if(!updated||!updated.canceledAt)throw Error('No se pudo verificar la anulación.');
+  alert('Venta N° '+id+' anulada. Balance e inventario actualizados.');
+ }catch(e){alert('No se pudo verificar el resultado. Revisá el balance antes de reintentar. '+e.message);await cloudLoad().catch(()=>{});}
+ finally{cloudBusy=false;}
+}
+
+
+let editingSale=null, editPrices={}, editOriginalQty={}, editOriginalItems={};
+function argentinaDate(value){return value?new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value)):'';}
+function editLocalDate(value){const d=new Date(value);if(!Number.isFinite(d.getTime()))return '';const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(d);const a=Object.fromEntries(parts.map(x=>[x.type,x.value]));return `${a.year}-${a.month}-${a.day}T${a.hour}:${a.minute}:${a.second}`;}
+const normalAdd=add,normalChangeQty=changeQty,normalTotals=totals,normalRenderCart=renderCart,normalRenderCatalog=renderCatalog,normalConfirmSale=confirmSale;
+function editProduct(id){return state.products.find(x=>String(x.id)===String(id));}
+function editLimit(p){const old=editOriginalQty[p.id]||0;return p.archivedAt?old:Number(p.stock)+old;}
+function editModeUI(){ $('saleTitle').textContent=editingSale?'Editar venta N° '+editingSale.id:'Cotizador / Nueva venta';$('editNotice').textContent=editingSale?'Editando una venta existente. No se generará otra venta. Horario de Argentina.':'';$('editNotice').classList.toggle('hidden',!editingSale);$('editDateLabel').classList.toggle('hidden',!editingSale);$('cancelEditButton').classList.toggle('hidden',!editingSale);$('saveSaleButton').textContent=editingSale?'Guardar cambios':'Confirmar venta';}
+function resetEdit(){editingSale=null;editPrices={};editOriginalQty={};editOriginalItems={};cart={};$('discount').value=0;$('editDate').value='';editModeUI();}
+function newSaleMode(){if(cloudBusy)return;if(editingSale){if(!confirm('¿Descartar la edición sin guardar?'))return;resetEdit();}show('sale');}
+function cancelSaleEdit(){if(cloudBusy||!editingSale)return;if(!confirm('¿Descartar los cambios de esta venta?'))return;resetEdit();show('balance');}
+function clearSaleCart(){if(cloudBusy)return;if(editingSale&&!confirm('¿Quitar todos los productos del carrito de edición?'))return;cart={};renderCart();renderCatalog();}
+function startSaleEdit(id){if(cloudBusy)return;const sale=state.sales.find(x=>String(x.id)===String(id));if(!sale||sale.canceledAt||!sale.items.length)return alert('Venta no disponible para editar.');if(sale.items.some(i=>!i.id||!editProduct(i.id))||new Set(sale.items.map(i=>i.id)).size!==sale.items.length)return alert('El detalle histórico requiere revisión antes de editar.');if((editingSale||Object.keys(cart).length)&&!confirm('¿Descartar el carrito actual para editar esta venta?'))return;resetEdit();editingSale={id:sale.id,revision:sale.revision,createdAt:sale.createdAt};for(const i of sale.items){cart[i.id]=Number(i.qty);editOriginalQty[i.id]=Number(i.qty);editOriginalItems[i.id]=i;editPrices[i.id]=Number(i.price);}$('discount').value=sale.discount;const pay=$('payment');if(!Array.from(pay.options).some(o=>o.value===sale.payment))pay.add(new Option(sale.payment,sale.payment));pay.value=sale.payment;$('editDate').value=editLocalDate(sale.createdAt);$('search').value='';editModeUI();show('sale');renderCatalog();renderCart();}
+add=function(id){if(cloudBusy)return;if(!editingSale)return normalAdd(id);const p=editProduct(id);if(!p||p.archivedAt)return;changeQty(id,1);};
+changeQty=function(id,delta){if(cloudBusy)return;if(!editingSale)return normalChangeQty(id,delta);const p=editProduct(id);if(!p)return;const next=Math.max(0,Math.min(editLimit(p),(cart[id]||0)+delta));if(next){cart[id]=next;if(!(id in editPrices))editPrices[id]=Number(p.price);}else delete cart[id];renderCart();renderCatalog();};
+totals=function(){if(!editingSale)return normalTotals();const lines=Object.entries(cart).map(([id,qty])=>({p:editProduct(id),qty,price:editPrices[id]})).filter(x=>x.p);const subtotal=lines.reduce((a,x)=>a+x.price*x.qty,0),discount=Number($('discount').value);return {lines,subtotal,discount,total:Math.round(subtotal*(1-discount/100)*100)/100};};
+function setEditPrice(id,value){editPrices[id]=value.trim()===''?NaN:Number(value);$('total').textContent='Total: '+(Number.isFinite(totals().total)?money(totals().total):'Precio inválido');}
+function idArg(id){return esc(JSON.stringify(String(id)));}
+renderCatalog=function(){if(!editingSale)return normalRenderCatalog();const q=$('search').value.toLocaleLowerCase();const ps=state.products.filter(p=>!p.archivedAt&&p.name.toLocaleLowerCase().includes(q)).slice(0,80);$('catalog').innerHTML=ps.map(p=>`<div class="line"><div><b>${esc(p.name)}</b><br><small>Disponible para esta venta: ${editLimit(p)} · ${money(p.price)}</small></div><button ${editLimit(p)<1||(cart[p.id]||0)>=editLimit(p)?'disabled':''} onclick="add(${idArg(p.id)})">Agregar</button></div>`).join('')||'<p>No se encontraron productos.</p>';};
+renderCart=function(){if(!editingSale)return normalRenderCart();const t=totals();$('cart').innerHTML=t.lines.map(x=>`<div class="line"><div><b>${esc(editOriginalItems[x.p.id]?.name||x.p.name)}</b>${x.p.archivedAt?' <small>(Archivado)</small>':''}<label>Precio unitario $ <input type="number" min="0" step="0.01" value="${Number.isFinite(x.price)?x.price:''}" oninput="setEditPrice(${idArg(x.p.id)},this.value)"></label></div><div class="controls"><button class="secondary" onclick="changeQty(${idArg(x.p.id)},-1)">−</button><b>${x.qty}</b><button class="secondary" ${x.qty>=editLimit(x.p)?'disabled':''} onclick="changeQty(${idArg(x.p.id)},1)">+</button></div></div>`).join('')||'<p class="muted">Carrito vacío.</p>';$('total').textContent='Total: '+(Number.isFinite(t.total)?money(t.total):'Precio inválido');};
+confirmSale=async function(){if(cloudBusy)return;if(!editingSale)return normalConfirmSale();const t=totals(),date=$('editDate').value;if(!t.lines.length||t.lines.length!==Object.keys(cart).length)return alert('Agregá productos válidos.');if(!Number.isFinite(t.discount)||t.discount<0||t.discount>100||!date||t.lines.some(x=>!Number.isFinite(x.price)||x.price<0||!Number.isInteger(x.qty)||x.qty<1||x.qty>editLimit(x.p)))return alert('Revisá cantidades, precios, descuento y fecha.');if(!confirm('¿Guardar cambios de venta N° '+editingSale.id+' por '+money(t.total)+'?'))return;const current={...editingSale};const timestamp=date===editLocalDate(current.createdAt)||date+':00'===editLocalDate(current.createdAt)?current.createdAt:new Date(date+'-03:00').toISOString();cloudBusy=true;let saved=false;try{const id=await cloudRequest('rpc/edit_sale',{method:'POST',body:JSON.stringify({p_sale_id:current.id,p_expected_revision:current.revision,p_payment_method:$('payment').value,p_discount_percent:t.discount,p_created_at:timestamp,p_items:t.lines.map(x=>({product_id:String(x.p.id),quantity:x.qty,unit_price:x.price}))})});if(String(id)!==String(current.id))throw Error('No se confirmó el identificador.');saved=true;resetEdit();await cloudLoad();const updated=state.sales.find(x=>String(x.id)===String(current.id));if(!updated||updated.revision!==current.revision+1)throw Error('No se pudo verificar la revisión.');show('balance');alert('Venta N° '+current.id+' actualizada.');}catch(e){alert((saved?'Cambios recibidos, revisá Balance. ':'No se confirmó el resultado. Revisá Balance antes de reintentar. ')+e.message);await cloudLoad().catch(()=>{});}finally{cloudBusy=false;}};
+
+function webLogout(){if(cloudBusy)return;localStorage.removeItem('fr_cloud_session');sessionStorage.removeItem('fr_cloud_access');location.reload();}
+restoreCloudSession();
+</script>
+</body></html>
